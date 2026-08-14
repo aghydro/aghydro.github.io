@@ -331,16 +331,25 @@
     padding:18px 20px;
     opacity:0; visibility:hidden; pointer-events:none;
     transform:translate(-50%, -8px);
-    transition:opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    /* the delay on hide gives the pointer time to cross the gap without
+       the popup vanishing mid-travel */
+    transition:opacity 0.2s ease 0.25s, transform 0.2s ease 0.25s, visibility 0.2s 0.25s;
   }
   .card-popup::before{
     content:""; position:absolute; top:-7px; left:50%;
     width:14px; height:14px; background:var(--white);
     border-left:1px solid var(--line); border-top:1px solid var(--line);
     transform:translateX(-50%) rotate(45deg);
+    z-index:1;
+  }
+  /* invisible bridge spanning the gap between card and popup, so the
+     pointer never leaves the .card hover region on its way down */
+  .card-popup::after{
+    content:""; position:absolute; left:-12px; right:-12px; top:-22px; height:22px;
   }
   .card:hover .card-popup, .card:focus-within .card-popup{
     opacity:1; visibility:visible; pointer-events:auto; transform:translate(-50%, 0);
+    transition-delay:0s;
   }
   .card-popup h4{
     color:var(--water); font-size:11.5px; font-weight:600; text-transform:uppercase;
