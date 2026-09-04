@@ -64,6 +64,61 @@ async function buildGallery() {
     const duration = Math.min(90, Math.max(14, setWidth / pxPerSecond));
     track.style.animationDuration = `${duration}s`;
   });
+
+  initLightbox(track, photos);
+}
+
+// Click-to-enlarge lightbox for the hero gallery. Every strip item (including
+// the duplicated ones used for the seamless marquee loop) opens the same
+// underlying `photos` list, indexed by src so prev/next stay in sync.
+function initLightbox(track, photos) {
+  const overlay = document.createElement('div');
+  overlay.className = 'lightbox-overlay';
+  overlay.innerHTML = `
+    <button class="lightbox-close" aria-label="Close">&times;</button>
+    <button class="lightbox-prev" aria-label="Previous photo">&#10094;</button>
+    <img class="lightbox-img" alt="">
+    <button class="lightbox-next" aria-label="Next photo">&#10095;</button>
+  `;
+  document.body.appendChild(overlay);
+
+  const imgEl = overlay.querySelector('.lightbox-img');
+  let index = 0;
+
+  const show = (i) => {
+    index = (i + photos.length) % photos.length;
+    imgEl.src = photos[index];
+  };
+  const open = (i) => {
+    show(i);
+    overlay.classList.add('open');
+    document.body.classList.add('lightbox-lock');
+  };
+  const close = () => {
+    overlay.classList.remove('open');
+    document.body.classList.remove('lightbox-lock');
+  };
+
+  track.querySelectorAll('.gallery-item').forEach(item => {
+    item.style.cursor = 'zoom-in';
+    item.addEventListener('click', () => {
+      const src = item.querySelector('img').getAttribute('src');
+      open(photos.indexOf(src));
+    });
+  });
+
+  overlay.querySelector('.lightbox-close').addEventListener('click', close);
+  overlay.querySelector('.lightbox-prev').addEventListener('click', () => show(index - 1));
+  overlay.querySelector('.lightbox-next').addEventListener('click', () => show(index + 1));
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.classList.contains('open')) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowLeft') show(index - 1);
+    if (e.key === 'ArrowRight') show(index + 1);
+  });
 }
 
 // This code runs only after all page sections (partials) have finished loading.
