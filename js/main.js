@@ -72,6 +72,8 @@ function setupGalleryScroll(wrapper, track) {
   const half = () => track.scrollWidth / 2;
   let resumeAt = 0;
   let dragging = false;
+  let captured = false;
+  let pointerId = null;
   let lastX = 0;
   let moved = 0;
   let prevLeft = 0;
@@ -95,10 +97,10 @@ function setupGalleryScroll(wrapper, track) {
   wrapper.addEventListener('pointerdown', e => {
     if (e.pointerType === 'touch') return; // native touch scrolling handles this
     dragging = true;
+    captured = false;
+    pointerId = e.pointerId;
     moved = 0;
     lastX = e.clientX;
-    wrapper.classList.add('is-dragging');
-    wrapper.setPointerCapture(e.pointerId);
   });
 
   wrapper.addEventListener('pointermove', e => {
@@ -106,6 +108,16 @@ function setupGalleryScroll(wrapper, track) {
     const dx = e.clientX - lastX;
     lastX = e.clientX;
     moved += Math.abs(dx);
+    // Only capture the pointer once a real drag is confirmed. Chromium
+    // retargets the 'click' that follows a captured pointer to the
+    // capturing element, so capturing on every pointerdown (even a plain
+    // click with near-zero movement) silently broke clicking a photo to
+    // open the lightbox.
+    if (!captured && moved > 6) {
+      captured = true;
+      wrapper.classList.add('is-dragging');
+      wrapper.setPointerCapture(pointerId);
+    }
     wrapper.scrollLeft -= dx;
     hold();
   });
@@ -114,7 +126,8 @@ function setupGalleryScroll(wrapper, track) {
     if (!dragging) return;
     dragging = false;
     wrapper.classList.remove('is-dragging');
-    if (wrapper.hasPointerCapture?.(e.pointerId)) wrapper.releasePointerCapture(e.pointerId);
+    if (captured && wrapper.hasPointerCapture?.(pointerId)) wrapper.releasePointerCapture(pointerId);
+    captured = false;
     hold();
   };
   wrapper.addEventListener('pointerup', endDrag);
@@ -183,7 +196,8 @@ function setupLightbox(wrapper, photos) {
   };
 
   wrapper.addEventListener('click', e => {
-    const item = e.target.closest('.gallery-item');
+    const path = e.composedPath ? e.composedPath() : [e.target];
+    const item = path.find(el => el.classList && el.classList.contains('gallery-item'));
     if (item) open(Number(item.dataset.index) || 0);
   });
 
@@ -203,61 +217,6 @@ function setupLightbox(wrapper, photos) {
     if (e.key === 'Escape') close();
     else if (e.key === 'ArrowLeft') show(current - 1);
     else if (e.key === 'ArrowRight') show(current + 1);
-  });
-
-  initLightbox(track, photos);
-}
-
-// Click-to-enlarge lightbox for the hero gallery. Every strip item (including
-// the duplicated ones used for the seamless marquee loop) opens the same
-// underlying `photos` list, indexed by src so prev/next stay in sync.
-function initLightbox(track, photos) {
-  const overlay = document.createElement('div');
-  overlay.className = 'lightbox-overlay';
-  overlay.innerHTML = `
-    <button class="lightbox-close" aria-label="Close">&times;</button>
-    <button class="lightbox-prev" aria-label="Previous photo">&#10094;</button>
-    <img class="lightbox-img" alt="">
-    <button class="lightbox-next" aria-label="Next photo">&#10095;</button>
-  `;
-  document.body.appendChild(overlay);
-
-  const imgEl = overlay.querySelector('.lightbox-img');
-  let index = 0;
-
-  const show = (i) => {
-    index = (i + photos.length) % photos.length;
-    imgEl.src = photos[index];
-  };
-  const open = (i) => {
-    show(i);
-    overlay.classList.add('open');
-    document.body.classList.add('lightbox-lock');
-  };
-  const close = () => {
-    overlay.classList.remove('open');
-    document.body.classList.remove('lightbox-lock');
-  };
-
-  track.querySelectorAll('.gallery-item').forEach(item => {
-    item.style.cursor = 'zoom-in';
-    item.addEventListener('click', () => {
-      const src = item.querySelector('img').getAttribute('src');
-      open(photos.indexOf(src));
-    });
-  });
-
-  overlay.querySelector('.lightbox-close').addEventListener('click', close);
-  overlay.querySelector('.lightbox-prev').addEventListener('click', () => show(index - 1));
-  overlay.querySelector('.lightbox-next').addEventListener('click', () => show(index + 1));
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) close();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (!overlay.classList.contains('open')) return;
-    if (e.key === 'Escape') close();
-    if (e.key === 'ArrowLeft') show(index - 1);
-    if (e.key === 'ArrowRight') show(index + 1);
   });
 }
 
