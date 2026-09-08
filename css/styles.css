@@ -337,31 +337,36 @@
   @media (max-width:600px){.grid{grid-template-columns:1fr;}}
 
   .card{
-    position:relative; aspect-ratio:2/1;
+    position:relative;
     transition:transform 0.3s ease;
   }
   .card:hover{transform:translateY(-4px); z-index:10;}
 
   /* card-inner holds the visible face (image + title) and clips to the
      rounded corners; card-popup is a sibling so it can float outside
-     that clipped box instead of being trapped inside it */
+     that clipped box instead of being trapped inside it. Height comes
+     from its own content (image aspect-ratio + text) rather than a
+     fixed card aspect-ratio, so the image slot can match the source
+     images' own proportions and fill it edge to edge with no letterboxing;
+     the grid still stretches every card in a row to match the tallest. */
   .card-inner{
     width:100%; height:100%;
     background:var(--white); border:1px solid var(--line); border-radius:18px;
     overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.04);
     transition:box-shadow 0.3s ease;
-    display:grid; grid-template-rows:3fr 2fr;
+    display:flex; flex-direction:column;
   }
   .panel .card-inner{background:var(--white);}
   .card:hover .card-inner{box-shadow:0 20px 40px -20px rgba(0,0,0,0.12);}
 
-  /* image gets 60% of card height, text gets 40% */
-  .card-scene{min-height:0; width:100%; overflow:hidden; background:var(--panel-2);}
-  .card-scene img{display:block; width:100%; height:100%; object-fit:contain; transition:transform 0.4s ease;}
+  /* matches the research images' native 345x200 ratio so they fill the
+     slot completely instead of being letterboxed inside a shorter box */
+  .card-scene{flex:none; width:100%; aspect-ratio:345/200; overflow:hidden; background:var(--panel-2);}
+  .card-scene img{display:block; width:100%; height:100%; object-fit:cover; transition:transform 0.4s ease;}
   .card:hover .card-scene img{transform:scale(1.06);}
 
   .card-body{
-    min-height:0; padding:16px 24px; overflow:hidden;
+    flex:1 1 auto; min-height:0; padding:16px 24px; overflow:hidden;
     display:flex; flex-direction:column; justify-content:center;
   }
   .card h3{font-size:17px; font-weight:600; margin-bottom:0; letter-spacing:-0.01em; line-height:1.3;}
